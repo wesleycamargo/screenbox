@@ -145,6 +145,32 @@ COPY mate/google-chrome.desktop /home/screenbox/Desktop/chromium-browser.desktop
 RUN chmod +x /home/screenbox/Desktop/*.desktop /opt/screenbox/defaults/*.desktop && \
     chown -R screenbox:screenbox /home/screenbox/Desktop /opt/screenbox/defaults
 
+# ChatGPT Desktop (optional): docker build --build-arg CHATGPT_DEB_URL=<url> ...
+# Electron sandbox needs user namespaces, which the container blocks -> wrapper adds --no-sandbox.
+# Menu entry is overridden in /usr/local/share/applications (package .desktop left untouched).
+ARG CHATGPT_DEB_URL=""
+RUN if [ -n "$CHATGPT_DEB_URL" ]; then \
+        curl -fsSL "$CHATGPT_DEB_URL" -o /tmp/chatgpt.deb && \
+        pkg=$(dpkg-deb -f /tmp/chatgpt.deb Package) && \
+        apt-get update && apt-get install -y --no-install-recommends /tmp/chatgpt.deb && \
+        rm -f /tmp/chatgpt.deb && rm -rf /var/lib/apt/lists/* && \
+        printf '%s\n' '#!/bin/sh' 'set -e' \
+            '[ "$(id -u)" = 0 ] && exec gosu screenbox "$0" "$@"' \
+            'export DISPLAY="${DISPLAY:-:99}"' \
+            'mkdir -p "$HOME/.local/share/pki/nssdb"' \
+            'exec /usr/bin/chatgpt --no-sandbox --disable-setuid-sandbox --password-store=basic "$@"' \
+            > /usr/local/bin/chatgpt-screenbox && \
+        chmod +x /usr/local/bin/chatgpt-screenbox && \
+        mkdir -p /usr/local/share/applications && \
+        for f in $(dpkg -L "$pkg" | grep '^/usr/share/applications/.*\.desktop$'); do \
+            sed -e 's|^Exec=[^ ]*|Exec=/usr/local/bin/chatgpt-screenbox|' \
+                -e 's|^TryExec=.*|TryExec=/usr/local/bin/chatgpt-screenbox|' \
+                "$f" > /usr/local/share/applications/$(basename "$f"); \
+        done && \
+        mkdir -p /home/screenbox/.local/share/pki/nssdb && \
+        chown -R screenbox:screenbox /home/screenbox/.local; \
+    fi
+
 # System scripts -> /opt/screenbox/bin/ (keep home dir clean)
 COPY ws-bridge.py setup-extension.py click-indicator.py grid-overlay.py vision-watch.py entrypoint.sh start-chrome.sh /opt/screenbox/bin/
 RUN chmod +x /opt/screenbox/bin/entrypoint.sh /opt/screenbox/bin/start-chrome.sh && \
