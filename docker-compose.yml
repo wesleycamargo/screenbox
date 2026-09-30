@@ -59,6 +59,7 @@ services:
       - SCREENBOX_LLM_ENDPOINT=${SCREENBOX_LLM_ENDPOINT:-}
       - SCREENBOX_LLM_MODEL=${SCREENBOX_LLM_MODEL:-}
       - SCREENBOX_LLM_KEY=${SCREENBOX_LLM_KEY:-}
+      - SCREENBOX_CODEX_HOST_DIR=${SCREENBOX_CODEX_HOST_DIR:-}
     networks:
       - screenbox
     restart: unless-stopped

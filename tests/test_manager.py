@@ -93,6 +93,24 @@ class TestDesktopManager:
         assert info.vnc_port is not None
         assert info.ws_port is not None
 
+    def test_create_mounts_codex_when_configured(self, manager, monkeypatch):
+        monkeypatch.setenv("SCREENBOX_CODEX_HOST_DIR", "/host/.codex")
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="abc123def456", stderr="")
+            manager.create("work")
+        cmd = next(c.args[0] for c in mock_run.call_args_list if c.args[0][:2] == ["docker", "create"])
+        assert "type=bind,src=/host/.codex/auth.json,dst=/home/screenbox/.codex/auth.json" in cmd
+        assert "type=bind,src=/host/.codex/config.toml,dst=/home/screenbox/.codex/config.toml,readonly" in cmd
+        assert cmd[-1] == manager.config.image
+
+    def test_create_no_codex_mount_by_default(self, manager, monkeypatch):
+        monkeypatch.delenv("SCREENBOX_CODEX_HOST_DIR", raising=False)
+        with patch("subprocess.run") as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="abc123def456", stderr="")
+            manager.create("work")
+        cmd = next(c.args[0] for c in mock_run.call_args_list if c.args[0][:2] == ["docker", "create"])
+        assert "--mount" not in cmd
+
     def test_create_idempotent(self, manager):
         with patch("subprocess.run") as mock_run:
             mock_run.return_value = MagicMock(

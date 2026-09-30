@@ -26,6 +26,8 @@ if [ "$(id -u)" = "0" ]; then
     chown -R screenbox:screenbox /home/screenbox/downloads 2>/dev/null || true
     chown -R screenbox:screenbox /home/screenbox/workspace 2>/dev/null || true
     chown -R screenbox:screenbox /home/screenbox/Desktop 2>/dev/null || true
+    # Docker creates ~/.codex as root when host Codex files are bind-mounted into it
+    chown screenbox:screenbox /home/screenbox/.codex 2>/dev/null || true
     chown -R screenbox:screenbox /var/run/xrdp /var/log/xrdp /etc/xrdp 2>/dev/null || true
     mkdir -p /var/log/screenbox && chown screenbox:screenbox /var/log/screenbox
 

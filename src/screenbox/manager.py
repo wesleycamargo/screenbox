@@ -516,6 +516,16 @@ class DesktopManager:
             image or self.config.image,
         ]
 
+        # Optional: share host Codex login + settings with ChatGPT Desktop.
+        # Host path as the Docker daemon sees it; --mount errors if a file is missing
+        # (-v would silently create a directory on the host instead).
+        codex_dir = os.environ.get("SCREENBOX_CODEX_HOST_DIR")
+        if codex_dir:
+            create_cmd[-1:-1] = [
+                "--mount", f"type=bind,src={codex_dir}/auth.json,dst=/home/screenbox/.codex/auth.json",
+                "--mount", f"type=bind,src={codex_dir}/config.toml,dst=/home/screenbox/.codex/config.toml,readonly",
+            ]
+
         try:
             # docker create + start separately (docker run -d hangs through proxy)
             result = subprocess.run(
